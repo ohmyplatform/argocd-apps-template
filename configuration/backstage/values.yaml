@@ -1,0 +1,246 @@
+backstage:
+  # -- Enable diagnostic mode in the Deployment
+  diagnosticMode:
+
+    # -- Enable diagnostic mode (all probes will be disabled and the command will be overridden)
+    enabled: false
+
+    # -- Command to override all containers in the Deployment
+    command:
+      - sleep
+
+    # -- Args to override all containers in the Deployment
+    args:
+      - infinity
+
+  # -- Ingress parameters
+  ingress:
+
+    # -- Enable the creation of the ingress resource
+    enabled: true
+
+    # -- Name of the IngressClass cluster resource which defines which controller will implement the resource (e.g nginx)
+    className: "nginx"
+
+    # -- Additional annotations for the Ingress resource
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # -- Hostname to be used to expose the route to access the backstage application (e.g: backstage.IP.nip.io)
+    host: "backstage.${{__GITHUB_ORG__}}.ohmyplatform.com"
+
+    # -- Ingress TLS parameters
+    tls:
+
+      # -- Enable TLS configuration for the host defined at `ingress.host` parameter
+      enabled: true
+
+      # -- The name to which the TLS Secret will be called
+      secretName: "backstage-tls"
+
+  # -- Backstage parameters
+  # @default -- See below
+  backstage:
+
+    # -- Number of deployment replicas
+    replicas: 1
+
+    # -- Define the [count of deployment revisions](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#clean-up-policy) to be kept.
+    # May be set to 0 in case of GitOps deployment approach.
+    revisionHistoryLimit: 10
+
+    image:
+
+      # -- Backstage image registry
+      registry: ghcr.io
+
+      # -- Backstage image repository
+      repository: ${{__GITHUB_ORG__}}/backstage
+
+      # -- Backstage image tag (immutable tags are recommended)
+      # NOTE: this is temporary. `latest` tag is not recommended for production use.
+      tag: latest
+      # tag: incorrect
+
+      # -- Specify a imagePullPolicy.
+      # Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      # <br /> Ref: https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy
+      pullPolicy: Always
+
+      # -- Set to true if you would like to see extra information on logs
+      debug: false
+
+    # -- Container ports on the Deployment
+    containerPorts:
+      backend: 7007
+
+    # -- Backstage container command
+    command: ["node", "packages/backend", "--config", "app-config.yaml", "--config", "app-config.production.yaml"]
+
+    # -- Backstage container command arguments
+    args: []
+
+    # -- Extra app configuration files to inline into command arguments
+    extraAppConfig: []
+
+    # -- Deployment sidecars
+    extraContainers: []
+
+    # -- Backstage container environment variables
+    extraEnvVars:
+    - name: GITHUB_ORG
+      value: "${{__GITHUB_ORG__}}"
+    - name: TECHDOCS_BUCKET_NAME
+      value: "${{__GITHUB_ORG__}}-backstage-techdocs"
+    - name: GOOGLE_PROJECT_ID
+      value: "${{__GOOGLE_PROJECT_ID__}}"
+
+    # -- Backstage container environment variables from existing ConfigMaps
+    extraEnvVarsCM: []
+
+    # -- Backstage container environment variables from existing Secrets
+    extraEnvVarsSecrets:
+    - backstage-secrets
+
+    # -- Backstage container additional volume mounts
+    extraVolumeMounts: []
+
+    # -- Backstage container additional volumes
+    extraVolumes: []
+
+    # -- Backstage container init containers
+    initContainers: []
+
+    # -- Directory containing the backstage installation
+    installDir: /app
+
+    # -- Resource requests/limits
+    # <br /> Ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-requests-and-limits-of-pod-and-container
+    # <!-- E.g.
+    # resources:
+    #   limits:
+    #     memory: 1Gi
+    #     cpu: 1000m
+    #   requests:
+    #     memory: 250Mi
+    #     cpu: 100m -->
+    resources: {}
+
+    # -- Readiness Probe
+    # Backstage doesn't provide any health endpoints by default. A simple one can be added like this: https://backstage.io/docs/plugins/observability/#health-checks
+    # <br /> Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes
+    # <!-- E.g.
+    # readinessProbe:
+    #   failureThreshold: 3
+    #   httpGet:
+    #     path: /healthcheck
+    #     port: 7007
+    #     scheme: HTTP
+    #   initialDelaySeconds: 30
+    #   periodSeconds: 10
+    #   successThreshold: 2
+    #   timeoutSeconds: 2
+    readinessProbe: {}
+
+    # -- Liveness Probe
+    # Backstage doesn't provide any health endpoints by default. A simple one can be added like this: https://backstage.io/docs/plugins/observability/#health-checks
+    # <br /> Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes
+    # <!-- E.g.
+    # livenessProbe:
+    #   failureThreshold: 3
+    #   httpGet:
+    #     path: /healthcheck
+    #     port: 7007
+    #     scheme: HTTP
+    #   initialDelaySeconds: 60
+    #   periodSeconds: 10
+    #   successThreshold: 1
+    #   timeoutSeconds: 2
+    livenessProbe: {}
+
+      # -- Startup Probe
+    # Backstage doesn't provide any health endpoints by default. A simple one can be added like this: https://backstage.io/docs/plugins/observability/#health-checks
+    # <br /> Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes
+    # <!-- E.g.
+    # startupProbe:
+    #   failureThreshold: 3
+    #   httpGet:
+    #     path: /healthcheck
+    #     port: 7007
+    #     scheme: HTTP
+    #   initialDelaySeconds: 60
+    #   periodSeconds: 10
+    #   successThreshold: 1
+    #   timeoutSeconds: 2
+    startupProbe: {}
+
+    # Allows to define the appConfig as a multiline string that generates a ConfigMap
+    # automatically, not requiring to have it pre provisioned as with the extraAppConfig key.
+    # DO NOT USE if you need to put sensitive data in the appConfig.
+    # E.g:
+    # appConfig:
+    #   app:
+    #     baseUrl: https://somedomain.tld
+    # -- Generates ConfigMap and configures it in the Backstage pods
+    appConfig:
+      app:
+        baseUrl: https://backstage.${{__GITHUB_ORG__}}.ohmyplatform.com
+      backend:
+        baseUrl: https://backstage.${{__GITHUB_ORG__}}.ohmyplatform.com
+        listen:
+          port: 7007
+  ## @section Traffic Exposure parameters
+
+  ## Service parameters
+  ##
+  # -- Service parameters
+  # @default -- See below
+  service:
+
+    # -- Kubernetes Service type
+    type: ClusterIP
+
+    # -- Backstage svc port for client connections
+    ports:
+      backend: 7007
+
+      # -- Backstage svc port name
+      name: http-backend
+
+      # -- Backstage svc target port referencing receiving pod container port
+      targetPort: backend
+
+  # -- PostgreSQL [chart configuration](https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml)
+  # @default -- See below
+  postgresql:
+
+    # -- Switch to enable or disable the PostgreSQL helm chart
+    enabled: true
+
+    # -- The authentication details of the Postgres database
+    auth:
+
+      # -- Name for a custom user to create
+      username: bn_backstage
+
+      # -- Password for the custom user to create
+      password: ""
+
+      # -- Name of existing secret to use for PostgreSQL credentials
+      existingSecret: "backstage-secrets"
+
+      # -- The secret keys Postgres will look for to retrieve the relevant password
+      secretKeys:
+
+        # -- The key in which Postgres will look for, for the admin password, in the existing Secret
+        adminPasswordKey: POSTGRES_ADMIN_PASSWORD
+
+        # -- The key in which Postgres will look for, for the user password, in the existing Secret
+        userPasswordKey: POSTGRES_USER_PASSWORD
+
+        # -- The key in which Postgres will look for, for the replication password, in the existing Secret
+        # replicationPasswordKey: replication-password
+
+    # -- PostgreSQL architecture (`standalone` or `replication`)
+    architecture: standalone

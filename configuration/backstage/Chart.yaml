@@ -1,0 +1,10 @@
+apiVersion: v2
+appVersion: 0.1.0
+description: A helm chart for backsage
+name: backstage
+type: application
+version: 0.1.0
+dependencies:
+  - name: backstage
+    version: 1.8.1
+    repository: https://backstage.github.io/charts
